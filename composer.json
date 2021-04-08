@@ -1,0 +1,20 @@
+{
+    "name": "masterdmx/laravel-relinking",
+    "description": "Relinking plugin for Laravel",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sergey Krening",
+            "email": "masterdmx3325@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "MasterDmx\\LaravelRelinking\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "require": {},
+    "version": "1.0.0"
+}
