@@ -3,7 +3,7 @@
 namespace MasterDmx\LaravelRelinking;
 
 use Illuminate\Support\ServiceProvider;
-use MasterDmx\LaravelRelinking\Contexts\ContextRegistry;
+use MasterDmx\LaravelRelinking\ContextRegistry;
 
 class RelinkingServiceProvider extends ServiceProvider
 {

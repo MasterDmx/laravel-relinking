@@ -2,6 +2,8 @@
 
 return [
     'contexts' => [
-        // 'articles' => ArticleRelinkingContext::class
+        // App/Relinking/ArticleRelinking::class
     ],
+
+    'limit' => 6,
 ];
