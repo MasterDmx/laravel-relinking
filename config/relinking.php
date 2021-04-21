@@ -2,7 +2,7 @@
 
 return [
     'contexts' => [
-        // App/Relinking/ArticleRelinking::class
+        // App\Relinking\ArticleRelinking::class
     ],
 
     'limit' => 6,

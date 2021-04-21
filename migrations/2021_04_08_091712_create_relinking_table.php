@@ -22,7 +22,7 @@ class CreateRelinkingTable extends Migration
             $table->double('relevance')->unsigned()->default(0);
             $table->timestamps();
 
-            $table->unique(['for_context_alias', 'for_context_id', 'context_alias', 'context_id']);
+            $table->unique(['for_context_alias', 'for_context_id', 'context_alias', 'context_id'], 'contexts_unique_index');
         });
     }
 
