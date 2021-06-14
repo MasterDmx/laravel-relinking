@@ -68,7 +68,7 @@ class RelinkingManager
 
             if ($potentialLinks->count() > 0) {
                 // Сортируем результат по релевантности и оставляем только нужное кол-во
-                $potentialLinks->sortByRelevance()->take($context->getLimit() - $availableLinks->count());
+                $potentialLinks = $potentialLinks->sortByRelevance()->take($context->getLimit() - $availableLinks->count());
 
                 // Регистрируем связи
                 Relinking::registerByList($alias, $id, $potentialLinks);
