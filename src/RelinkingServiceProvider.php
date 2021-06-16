@@ -3,7 +3,7 @@
 namespace MasterDmx\LaravelRelinking;
 
 use Illuminate\Support\ServiceProvider;
-use MasterDmx\LaravelRelinking\ContextRegistry;
+use MasterDmx\LaravelRelinking\ContextManager;
 
 class RelinkingServiceProvider extends ServiceProvider
 {
@@ -17,11 +17,11 @@ class RelinkingServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom( __DIR__.'/../config/relinking.php', 'relinking');
 
-        $contexts = new ContextRegistry();
+        $contexts = new ContextManager();
         $contexts->addFromArray(config('relinking.contexts'));
 
         // Синглтон реестра контекстов
-        $this->app->singleton(ContextRegistry::class, fn () => $contexts);
+        $this->app->singleton(ContextManager::class, fn () => $contexts);
 
         // Синглтон менеджера
         $this->app->singleton(RelinkingManager::class);

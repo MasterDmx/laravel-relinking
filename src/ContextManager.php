@@ -5,7 +5,7 @@ namespace MasterDmx\LaravelRelinking;
 use MasterDmx\LaravelRelinking\Exceptions\UndefinedContextException;
 use function app;
 
-class ContextRegistry
+class ContextManager
 {
     /**
      * @var array|string[]
@@ -19,7 +19,7 @@ class ContextRegistry
      *
      * @return $this
      */
-    public function add(string $class): ContextRegistry
+    public function add(string $class): ContextManager
     {
         // Привязываем обозначение к конкретному классу
         $this->contexts[$class::alias()] = $class;
@@ -37,7 +37,7 @@ class ContextRegistry
      *
      * @return $this
      */
-    public function addFromArray(array $data): ContextRegistry
+    public function addFromArray(array $data): ContextManager
     {
         foreach ($data as $class) {
             $this->add($class);

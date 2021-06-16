@@ -2,32 +2,100 @@
 
 namespace MasterDmx\LaravelRelinking;
 
-use MasterDmx\LaravelRelinking\ContextRegistry;
+use MasterDmx\LaravelRelinking\Collections\PageCollection;
+use MasterDmx\LaravelRelinking\ContextManager;
+use MasterDmx\LaravelRelinking\Entities\Page;
+use MasterDmx\LaravelRelinking\VO\Link;
+use Symfony\Component\HttpKernel\Controller\ArgumentResolver\VariadicValueResolver;
 
 class RelinkingManager
 {
-    private ContextRegistry $contexts;
+    public function __construct(
+        private ContextManager $contexts,
+        private RelinkingSupport $support,
+    ){}
 
-    public function __construct(ContextRegistry $contexts)
+    /**
+     * Возвращает коллекцию страниц
+     */
+    public function getPages(): PageCollection
     {
-        $this->contexts = $contexts;
+        $result = [];
+
+        // Список кол-ва входящих ссылок по страница
+        $linksCountCollection = RelinkingModel::query()->getAllLinksCountByPages();
+
+        // Список кол-ва исходящих ссылок по страницам
+        $incomingLinksCountCollection = RelinkingModel::query()->getAllIncomingLinksCountByPages();
+
+        // Инициализируем страницы
+        foreach ($this->contexts->all() as $context) {
+            $pages = $context->all();
+
+            foreach ($pages as $data){
+                $linksCount = $incomingLinksCount = 0;
+
+                foreach ($incomingLinksCountCollection as $point){
+                    if ($point->to_context === $context->getAlias() && $point->to_id === $data->id) {
+                        $incomingLinksCount = $point->count;
+                    }
+                }
+
+                foreach ($linksCountCollection as $point){
+                    if ($point->from_context === $context->getAlias() && $point->from_id === $data->id) {
+                        $linksCount = $point->count;
+                    }
+                }
+
+                $result[] = new Page($data->id, $context, Link::fromContextDTO($data), $linksCount, $incomingLinksCount);
+            }
+        }
+
+        return new PageCollection($result);
     }
 
     /**
-     * Получает связи под контекст и ID (основной метод)
+     * Возвращает объект конкретной страницы
      *
      * @param string $alias
      * @param        $id
      *
-     * @return RelinkingCollection
+     * @return Page
      */
-    public function get(string $alias, $id): RelinkingCollection
+    public function getPage(string $alias, $id): Page
     {
-        $links = Relinking::query()->select('id', 'context_alias', 'context_id', 'relevance')->getFor($alias, $id);
+        // Список кол-ва входящих ссылок по страница
+        $linksCount = RelinkingModel::query()->getLinksCount($alias, $id);
+        $context = $this->contexts->get($alias);
+        $data = $context->getDataById($id);
 
-        $this->saturateCollectionLinksData($links);
+        return new Page($data->id, $context, Link::fromContextDTO($data), $linksCount, 0);
+    }
 
-        return $links;
+    /**
+     * Возвращает коллекцию исходящих ссылок по контексту $alias и $id
+     *
+     * @param string $alias
+     * @param        $id
+     *
+     * @return Collections\OutgiongLinkCollection
+     */
+    public function getLinks(string $alias, $id)
+    {
+        return $this->support->getLinksByRelinkingCollection(RelinkingModel::query()->for($alias, $id)->get());
+    }
+
+    /**
+     * Возвращает коллекцию входящих ссылок по контексту $alias и $id
+     *
+     * @param string $alias
+     * @param        $id
+     *
+     * @return Collections\OutgiongLinkCollection
+     */
+    public function getIncomingLinks(string $alias, $id)
+    {
+        return $this->support->getIncomingLinksByRelinkingCollection(RelinkingModel::query()->whereIncomingPageIs($alias, $id)->get());
     }
 
     /**
@@ -39,76 +107,91 @@ class RelinkingManager
      *
      * @return void
      */
-    public function generate(string $alias, $id, string $text): void
+    public function generate(string $alias, $id, string $seachText = null): void
     {
-        // Объект контекста
-        $context = $this->contexts->get($alias);
+        $incomingContext = $this->contexts->get($alias);
+
+        if (!isset($seachText)) {
+            $seachText = $incomingContext->getSearchText($id);
+        }
+
+        // Кол-во уже имеющихся исходящих ссылок
+        $outgoingLinksCount = RelinkingModel::query()->for($alias, $id)->count();
 
         // Проверяем, не заполнены ли связи
-        if (Relinking::query()->for($alias, $id)->count() < $context->getLimit()) {
-            // Получаем имеющиеся связи для исключения их из выборки
-            $availableLinks = Relinking::query()->getFor($alias, $id);
+        if ($outgoingLinksCount < $incomingContext->linksLimit()) {
+            $availableOutgoingLinks = RelinkingModel::query()->getFor($alias, $id);
+            $selected               = new SelectedRelinkingCollection();
 
-            // Коллекция потенциальных ссылок
-            $potentialLinks = new PotentialLinkCollection();
-
-            // Выполняем подбор
-            foreach ($this->contexts->all() as $selectableContext) {
+            // Проходимся по контекстам
+            foreach ($this->contexts->all() as $context) {
                 $except = collect();
 
-                if ($selectableContext->getAlias() === $context->getAlias()){
+                // Исключаем из подбора текущий ID сущности
+                if ($context->getAlias() === $incomingContext->getAlias()){
                     $except->add($id);
                 }
 
-                $except = $except->merge($availableLinks->whereContextAlias('article')->getContextIds());
+                // Исключаем из подбора ссылки, у которых заполнены входящие ссылки
+                if ($overSaturatedLinksIds = RelinkingModel::query()->getIdsWhereCountIncomingLinksInContextMoreThen($context->getAlias(), $context->incomingLinksLimit())) {
+                    $except = $except->merge(collect($overSaturatedLinksIds));
+                }
 
-                // Через контекст формируем потенциальные ссылки, присваеваем им текущий выбираемый контекст и вносим в общую коллекцию
-                $potentialLinks = $potentialLinks->merge($selectableContext->search($text, $except->toArray())->setContext($selectableContext));
+                if ($availableOutgoingLinks->isNotEmpty()){
+                    $ids = $availableOutgoingLinks->whereOutgoingContext($context)->getOutgoingIds();
+
+                    if ($ids->isNotEmpty()) {
+                        $except = $except->merge($ids);
+                    }
+                }
+
+                // Дополняем общую коллекцию подобранных ссылок
+                $selected = $selected->merge(
+                    $context->select($seachText, $except->toArray())
+                );
             }
 
-            if ($potentialLinks->count() > 0) {
+            if ($selected->count() > 0) {
                 // Сортируем результат по релевантности и оставляем только нужное кол-во
-                $potentialLinks = $potentialLinks->sortByRelevance()->take($context->getLimit() - $availableLinks->count());
+                $selected = $selected->sortByRelevance()->take($context->linksLimit() - $availableOutgoingLinks->count());
 
                 // Регистрируем связи
-                Relinking::registerByList($alias, $id, $potentialLinks);
+                RelinkingModel::registerByList($incomingContext, $id, $selected);
             }
         }
     }
 
     /**
-     * Удаляет перелинковку конкретного элемента контекста и генерирует связи заного
-     *
-     * @param string $alias
-     * @param        $id
-     * @param string $text
+     * Генерирует связи для всех сущностей, у которых есть место
      */
-    public function refresh(string $alias, $id, string $text): void
+    public function generateAll()
     {
-        $this->remove($alias, $id);
-        $this->generate($alias, $id, $text);
-    }
+        // Загружаем все контексты из реестра
+        $contexts = $this->contexts->all();
 
-    /**
-     * Удаляет перелинковку конкретного элемента контекста
-     */
-    public function remove(string $alias, $id): bool
-    {
-        return Relinking::query()->for($alias, $id)->delete();
-    }
-
-    /**
-     * Насыщает элементы перелинковки данными ссылок
-     *
-     * @param RelinkingCollection $links
-     *
-     * @return void
-     */
-    private function saturateCollectionLinksData(RelinkingCollection $links): void
-    {
-        foreach ($links->groupByContext() as $contextAlias => $links) {
-            $instances = $this->contexts->get($contextAlias)->getLinksData($links->getContextIds()->toArray());
-            $links->setLinksData($instances);
+        // Запускаем цикл по контекстам
+        foreach ($contexts as $context) {
+            $context->getAll()->each(function ($item) use ($context) {
+                $this->generate($context->getAlias(), $item->id);
+            });
         }
+    }
+
+    /**
+     * Возвращает массив всех контекстов
+     *
+     * @return Context[]
+     */
+    public function getContexts()
+    {
+        return $this->contexts->all();
+    }
+
+    /**
+     * Сбрасывает все связи
+     */
+    public function reset(): void
+    {
+        RelinkingModel::query()->truncate();
     }
 }

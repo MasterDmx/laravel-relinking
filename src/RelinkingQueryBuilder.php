@@ -5,17 +5,17 @@ namespace MasterDmx\LaravelRelinking;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use MasterDmx\LaravelRelinking\Links\Relinking;
-use MasterDmx\LaravelRelinking\RelinkingCollection;
+use MasterDmx\LaravelRelinking\RelinkingModelCollection;
 
 /**
  * Class ArticleQueryBuilder
- * @method static RelinkingCollection|Collection get()
+ * @method static RelinkingModelCollection|Collection get()
  * @method static Relinking find()
  * @method static Relinking|null first()
- * @method static RelinkingQueryBuilder whereForContextAlias($value)
- * @method static RelinkingQueryBuilder whereForContextId($value)
- * @method static RelinkingQueryBuilder whereContextAlias($value)
- * @method static RelinkingQueryBuilder whereContextId($value)
+ * @method static RelinkingQueryBuilder whereFromContext($value)
+ * @method static RelinkingQueryBuilder whereFromId($value)
+ * @method static RelinkingQueryBuilder whereToContext($value)
+ * @method static RelinkingQueryBuilder whereToId($value)
  * @method static RelinkingQueryBuilder whereId($value)
  *
  * @package Domain\Articles\QueryBuilders
@@ -23,21 +23,51 @@ use MasterDmx\LaravelRelinking\RelinkingCollection;
 class RelinkingQueryBuilder extends Builder
 {
     /**
-     * @param string|callable $value
+     * Вовзвращает массив ID элементов контекста $alias, у которых кол-во входящих ссылок больше чем $count
      *
-     * @return RelinkingQueryBuilder
+     * @return array
      */
-    public function whereLigaments(callable $value): RelinkingQueryBuilder
+    public function getIdsWhereCountIncomingLinksInContextMoreThen(string $alias, int $count): array
     {
-        return $this->whereHas(Relinking::RELATIONSHIP_LIGAMENTS, $value);
+        return $this->groupBy('to_id')->havingRaw('COUNT(`to_id`) >= ' . $count)->where('to_context', $alias)->pluck('to_id')->toArray();
     }
 
     /**
-     * @return RelinkingQueryBuilder
+     * Возвращает кол-во исходящих ссылок, сгруппированных по контексту и ID
+     *
+     * @return Collection
      */
-    public function hasLigaments(): RelinkingQueryBuilder
+    public function getAllLinksCountByPages()
     {
-        return $this->has(Relinking::RELATIONSHIP_LIGAMENTS);
+        return $this->selectRaw('from_context, from_id, COUNT(id) as "count"')->groupBy('from_context', 'from_id')->toBase()->get();
+    }
+
+    /**
+     * Возвращает кол-во исходящих ссылок для определенного элемента контекста
+     *
+     * @param string $alias
+     * @param        $id
+     *
+     * @return int
+     */
+    public function getLinksCount(string $alias, $id): int
+    {
+        return $this->selectRaw('from_context, from_id, COUNT(id) as "count"')->groupBy('from_context', 'from_id')->for($alias, $id)->toBase()->pluck('count')->first() ?? 0;
+    }
+
+    /**
+     * Возвращает кол-во входящих ссылок, сгруппированных по контексту и ID
+     *
+     * @return Collection
+     */
+    public function getAllIncomingLinksCountByPages()
+    {
+        return $this->selectRaw('to_context, to_id, COUNT(id) as "count"')->groupBy('to_context', 'to_id')->toBase()->get();
+    }
+
+    public function whereIncomingPageIs(string $alias, $id): RelinkingQueryBuilder
+    {
+        return $this->whereToContext($alias)->whereToId($id);
     }
 
     /**
@@ -48,9 +78,22 @@ class RelinkingQueryBuilder extends Builder
      *
      * @return RelinkingQueryBuilder
      */
-    public function for(string $alias, string $id)
+    public function for(string $alias, string $id): RelinkingQueryBuilder
     {
-        return $this->whereForContextAlias($alias)->whereForContextId($id);
+        return $this->whereToContext($alias)->whereFromId($id);
+    }
+
+    /**
+     * Под определенный контекст и ID
+     *
+     * @param string $alias
+     * @param string $id
+     *
+     * @return RelinkingQueryBuilder
+     */
+    public function whereIncoming(string $alias, string $id)
+    {
+        return $this->whereToContext($alias)->whereToId($id);
     }
 
     /**
@@ -59,26 +102,11 @@ class RelinkingQueryBuilder extends Builder
      * @param string $alias
      * @param string $id
      *
-     * @return RelinkingCollection
+     * @return RelinkingModelCollection
      */
-    public function getFor(string $alias, string $id): RelinkingCollection
+    public function getFor(string $alias, string $id): RelinkingModelCollection
     {
-        return $this->whereForContextAlias($alias)->whereForContextId($id)->get();
-    }
-
-    public function getIds()
-    {
-        return $this->pluck('item_id');
-    }
-
-    /**
-     * Получить кол-во связей всех ссылок
-     *
-     * @return Collection|RelinkingCollection
-     */
-    public function getAllCountLigaments()
-    {
-        return $this->select('id', 'context', 'item_id')->withCountLigaments()->get();
+        return $this->whereFromContext($alias)->whereFromId($id)->get();
     }
 
     /**
@@ -92,18 +120,5 @@ class RelinkingQueryBuilder extends Builder
     public function findByContext(string $context, string $id): ?Relinking
     {
         return $this->whereContext($context)->whereItemId($id)->first();
-    }
-
-    /**
-     * Проверить существование
-     *
-     * @param string $context
-     * @param string $id
-     *
-     * @return bool
-     */
-    public function checkExists(string $context, string $id): bool
-    {
-        return $this->whereContext($context)->whereItemId($id)->exists();
     }
 }

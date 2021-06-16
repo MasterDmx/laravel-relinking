@@ -3,6 +3,7 @@
 namespace MasterDmx\LaravelRelinking;
 
 use Illuminate\Support\Collection;
+use MasterDmx\LaravelRelinking\DTO\ContextDTO;
 use MasterDmx\LaravelRelinking\PotentialLinkCollection;
 
 interface Context
@@ -21,23 +22,17 @@ interface Context
      */
     public function getAlias(): string;
 
-
-    /**
-     * Максимальное кол-во ссылок для каждого элемента контекста
-     *
-     * @return int
-     */
-    public function getLimit(): int;
-
     /**
      * Поиск элементов для формирования связей
      *
      * @param string $text
      * @param array  $except
      *
-     * @return PotentialLinkCollection
+     * @return SelectedRelinkingCollection
      */
-    public function search(string $text, array $except): PotentialLinkCollection;
+    public function select(string $text, array $except = []): SelectedRelinkingCollection;
+
+    public function getSearchText($id): string;
 
     /**
      * Создает массив контекстов под конкретные элементы контекстов
@@ -46,5 +41,11 @@ interface Context
      *
      * @return Collection
      */
-    public function getLinksData(array $ids): Collection;
+    public function getLinks(array $ids): Collection;
+
+    public function getDataById($id): ContextDTO;
+    public function linksLimit(): int;
+    public function incomingLinksLimit(): int;
+
+    public function all();
 }
