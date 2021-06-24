@@ -18,7 +18,7 @@ class CreateRelinkingTable extends Migration
             $table->string('from_context', 255);
             $table->string('from_id', 100);
             $table->string('to_context', 255);
-            $table->string('context_id', 100);
+            $table->string('to_id', 100);
             $table->double('relevance')->unsigned()->default(0);
             $table->timestamps();
 
