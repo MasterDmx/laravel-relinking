@@ -2,10 +2,9 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-class CreateRelinkingSearchTable extends Migration
+class CreateMdrRelinkingTable extends Migration
 {
     /**
      * Run the migrations.
@@ -14,15 +13,14 @@ class CreateRelinkingSearchTable extends Migration
      */
     public function up()
     {
-        Schema::create('linkable_entities', function (Blueprint $table) {
-
-            $table->string('linkable_type', 255);
+        Schema::create('mdr_relinking', function (Blueprint $table) {
             $table->unsignedBigInteger('linkable_id');
-            $table->mediumText('search');
+            $table->unsignedBigInteger('link_id');
+            $table->double('relevance')->unsigned()->default(0);
             $table->timestamps();
-        });
 
-        DB::statement('ALTER TABLE relinking_search ADD FULLTEXT search(search)');
+            $table->primary(['linkable_id', 'link_id'], 'linkable_unique_index');
+        });
     }
 
     /**
@@ -32,6 +30,6 @@ class CreateRelinkingSearchTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('relinking_search');
+        Schema::dropIfExists('mdr_relinking');
     }
 }
