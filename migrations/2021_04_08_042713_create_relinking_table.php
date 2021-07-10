@@ -15,14 +15,14 @@ class CreateRelinkingTable extends Migration
     {
         Schema::create('relinking', function (Blueprint $table) {
             $table->id();
-            $table->string('from_context', 255);
-            $table->string('from_id', 100);
-            $table->string('to_context', 255);
-            $table->string('to_id', 100);
+            $table->string('linkable_type', 255);
+            $table->unsignedBigInteger('linkable_id');
+            $table->string('link_type', 255);
+            $table->unsignedBigInteger('link_id');
             $table->double('relevance')->unsigned()->default(0);
             $table->timestamps();
 
-            $table->unique(['from_context', 'from_id', 'to_context', 'to_id'], 'contexts_unique_index');
+            $table->unique(['linkable_type', 'linkable_id', 'link_type', 'link_id'], 'linkable_unique_index');
         });
     }
 

@@ -1,9 +1,15 @@
 <?php
 
 return [
-    'contexts' => [
-        // App\Relinking\ArticleRelinking::class
+
+    /**
+     * Linkable models
+     */
+    'models' => [
+        // App\Models\Post::class
     ],
 
-    'limit' => 6,
+    'default_links_limit' => 10,
+
+    'default_referrers_limit' => 10,
 ];

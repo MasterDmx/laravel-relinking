@@ -3,7 +3,8 @@
 namespace MasterDmx\LaravelRelinking;
 
 use Illuminate\Support\ServiceProvider;
-use MasterDmx\LaravelRelinking\ContextManager;
+use MasterDmx\LaravelRelinking\ConsoleCommands\RelinkingGenerate;
+use MasterDmx\LaravelRelinking\ConsoleCommands\RelinkingReset;
 
 class RelinkingServiceProvider extends ServiceProvider
 {
@@ -11,19 +12,19 @@ class RelinkingServiceProvider extends ServiceProvider
     {
         $this->publishes([ __DIR__.'/../config/relinking.php' => config_path('relinking.php')], 'config');
         $this->publishes([ __DIR__.'/../migrations' => database_path('migrations')], 'migrations');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                RelinkingGenerate::class,
+                RelinkingReset::class,
+            ]);
+        }
     }
 
     public function register()
     {
         $this->mergeConfigFrom( __DIR__.'/../config/relinking.php', 'relinking');
 
-        $contexts = new ContextManager();
-        $contexts->addFromArray(config('relinking.contexts'));
-
-        // Синглтон реестра контекстов
-        $this->app->singleton(ContextManager::class, fn () => $contexts);
-
-        // Синглтон менеджера
-        $this->app->singleton(RelinkingManager::class);
+        LinkableRegistry::fromArray(config('relinking.models', []));
     }
 }
