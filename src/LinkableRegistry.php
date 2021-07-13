@@ -2,7 +2,6 @@
 
 namespace MasterDmx\LaravelRelinking;
 
-use http\Exception\RuntimeException;
 use MasterDmx\LaravelRelinking\Contracts\Linkable;
 
 class LinkableRegistry
@@ -33,7 +32,7 @@ class LinkableRegistry
             return clone static::$data[$class];
         }
 
-        throw new RuntimeException('Linkable class ' . $class . ' not registered');
+        throw new \RuntimeException('Linkable class ' . $class . ' not registered');
     }
 
     public static function add(string $class): Linkable
