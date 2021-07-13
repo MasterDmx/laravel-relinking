@@ -45,7 +45,7 @@ trait HasRelinking
      */
     public function linksLimit(): int
     {
-        return 10;
+        return config('relinking.default_links_limit');
     }
 
     /**
@@ -55,7 +55,7 @@ trait HasRelinking
      */
     public function referrerLimit(): int
     {
-        return 10;
+        return config('relinking.default_referrers_limit');
     }
 
     /**
