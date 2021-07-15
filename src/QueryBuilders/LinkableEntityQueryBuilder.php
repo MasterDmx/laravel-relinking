@@ -82,7 +82,7 @@ class LinkableEntityQueryBuilder extends Builder
             }
 
             foreach ($list ?? [] as $class => $ids){
-                $linkableCollection = app($class)->linkableQuery()->whereIn('id', $ids)->get();
+                $linkableCollection = app($class)->getLinkableModelsByIds($ids);
 
                 foreach ($entities as $entity){
                     /** @var LinkableEntity $entity */

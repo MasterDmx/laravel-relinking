@@ -2,6 +2,9 @@
 
 return [
 
+    /**
+     * Linkable models
+     */
     'models' => [
         // App\Models\Post::class
     ],
@@ -9,5 +12,4 @@ return [
     'default_links_limit' => 10,
 
     'default_referrers_limit' => 10,
-
 ];

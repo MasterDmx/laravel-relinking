@@ -125,7 +125,7 @@ class ModelRelinking
      */
     public function remove(): static
     {
-        $this->model->linkableEntity()->remove();
+        $this->model->linkableEntity()?->remove();
 
         return $this;
     }

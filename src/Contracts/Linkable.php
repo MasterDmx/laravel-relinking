@@ -47,9 +47,9 @@ interface Linkable
     /**
      * Запрос, на подгрузку данных
      *
-     * @return Builder
+     * @return Collection
      */
-    public function linkableQuery(): Builder;
+    public function getLinkableModelsByIds(array $ids): Collection;
 
     /**
      * Relation to linkable model

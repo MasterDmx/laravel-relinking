@@ -58,14 +58,9 @@ trait HasRelinking
         return config('relinking.default_referrers_limit');
     }
 
-    /**
-     * Запрос на получение данных для формирования ссылки
-     *
-     * @return Builder
-     */
-    public function linkableQuery(): Builder
+    public function getLinkableModelsByIds(array $ids): Collection
     {
-        return $this->newQuery();
+        return $this->newQuery()->whereIn('id', $ids)->get();
     }
 
     public function setLinkableRelation(LinkableEntity $model): static
