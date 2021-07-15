@@ -2,6 +2,7 @@
 
 namespace MasterDmx\LaravelRelinking;
 
+use Illuminate\Support\Collection;
 use MasterDmx\LaravelRelinking\Contracts\Linkable;
 use MasterDmx\LaravelRelinking\Exceptions\LinkableEntityHasAlreadyRegisteredException;
 use MasterDmx\LaravelRelinking\Models\LinkableEntity;
@@ -87,7 +88,7 @@ class ModelRelinking
      */
     public function getLinks()
     {
-        return $this->model->linkableEntity()->getLinks();
+        return $this->model->linkableEntity()?->getLinks() ?? new Collection();
     }
 
     /**
